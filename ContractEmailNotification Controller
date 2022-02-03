@@ -1,0 +1,88 @@
+/**
+* The controller class for ContractEmailNotification aura component to send 
+the email by passing the contract Id
+* @author  Mohan Karimsetti
+* @version 1.0
+* @since   02.12.2021
+*/
+public class ContractEmailNotificationController {
+    
+    @AuraEnabled
+    public static void sendNotification(string contractId){
+        String subject = '';
+        if(contractId != null){
+            Contract__c con = [SELECT Id,Name, RecordType.Name, Customer_Name__r.Name,
+                               Owner.Name,All_Contract_Lines__c,Total_Line_Volume__c,Notification_Sent__c, Changed_since_last_notification__c, 
+                               (SELECT Id, Volume__c, Commodity__r.Name FROM Contract_Line_Items__r)
+                               FROM Contract__c WHERE Id =: contractId];
+            
+            string traderName = con.Owner.Name;
+            string transType;
+            string volName;
+            string toFrom;
+            string consumerName = con.Customer_Name__r.Name;
+            List<String> args = new String[]{'0','number','#,###.0'};
+            
+            if (con.RecordType.Name == 'Sales Contract'){
+                transType = 'Sold';
+                toFrom = 'To';
+            }else if (con.RecordType.Name == 'Purchase Contract'){
+                transType = 'Bought';
+                toFrom = 'From';
+            }
+            List<Contract_Line_Item__c> conItem = con.Contract_Line_Items__r;
+            if(con.All_Contract_Lines__c == 1){
+                volName = String.format(conItem[0].Volume__c.format(), args) + ' '+conItem[0].Commodity__r.Name;
+            }else{
+                volName = String.format(con.Total_Line_Volume__c.format(), args);
+            }
+            if (con.Notification_Sent__c == TRUE && con.Changed_since_last_notification__c == TRUE) {
+                subject = 'Revised';
+            }
+            subject += con.Name+' '+':'+' '+traderName +' '+ transType +' '+ volName+' ' + toFrom +' '+ consumerName;
+            
+        }
+        
+        Messaging.SingleEmailMessage mail = new Messaging.SingleEmailMessage();
+        String orderEmail = System.Label.ContractEmail;
+        String userEmail =UserInfo.getUserEmail();
+        List<string> sendemails = new List<string>();
+        sendemails.addAll((orderEmail).split(';'));
+        sendemails.add(userEmail);
+        Id userId = UserInfo.getUserId();
+        String pageAsString;
+        if(!Test.isRunningTest()){
+        PageReference pr = Page.ContractPage;
+        pr.getParameters().put('Id',contractId);
+         pageAsString = pr.getContent().tostring();
+        }else{
+           pageAsString = 'Test'; 
+        }
+        mail.setToAddresses(sendemails);
+        mail.setHtmlBody(pageAsString);
+        mail.setSubject(subject);
+        mail.setSenderDisplayName('SCHUPAN ORDERS');
+        mail.setSaveAsActivity(false);
+        
+        //send the email
+        List<Messaging.SendEmailResult> results = Messaging.sendEmail(new Messaging.SingleEmailMessage[] {mail});
+        // we can then check for success
+        if (results[0].success) {
+            Contract__c con = [SELECT Id, Notification_Sent__c, Changed_since_last_notification__c, (SELECT Id, Changed_since_last_notification__c FROM Contract_Line_Items__r WHERE Changed_since_last_notification__c = true) FROM Contract__c WHERE Id=: contractId];
+            con.Notification_Sent__c=true;
+            con.Changed_since_last_notification__c = false;
+            update con;
+            //JC/FF 08/30/2021 SCHU-29 adding code based on changes since last notification sent
+            if (!con.Contract_Line_Items__r.isEmpty()) {
+                for (Contract_Line_Item__c line : con.Contract_Line_Items__r) {
+                    line.Changed_since_last_notification__c = false;
+                }
+                update con.Contract_Line_Items__r;
+            }
+            System.debug('The email was sent successfully.');
+        } else {
+            System.debug('The email failed to send:  ' +  results[0].errors[0].message);    
+        }
+        
+    }
+}
