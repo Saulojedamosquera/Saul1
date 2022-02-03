@@ -1,0 +1,233 @@
+<!--
+*  Visualforce component contains email template for contract email notification
+* @author  Mohan karimsetti
+* @version 1.0
+* @since   02.12.2021
+-->
+<apex:component controller="ContractEmailNotification" access="global">
+    <apex:attribute name="contractObjId" description="This is the contract" type="String" assignTo="{!contractId}"/>
+    
+    <html>
+        <head>
+            <style type="text/css">
+                body {
+                font-family: Sans-serif;
+                font-size:16px;
+                
+                }
+                #customers {
+                font-family: Arial, Helvetica, sans-serif;
+                border-collapse: collapse;
+                width: 100%;
+                }
+                
+                #customers td, #customers th {
+                border: 1px solid #ddd;
+                padding: 8px;
+                }
+                
+                #customers tr:nth-child(even){background-color: #f2f2f2;}
+                
+                #customers tr:hover {background-color: #ddd;}
+                
+                #customers th {
+                padding-top: 12px;
+                padding-bottom: 12px;
+                text-align: left;
+                }
+                .bold{
+                font-weight:bold;
+                font-size:16px;
+                }
+                .roman {
+                list-style-type: disc;
+                }
+                .square {
+                list-style-type: circle;
+                margin-left: -2em;
+                }
+                div.b {
+                line-height: 1.6;
+                }
+            </style>
+        </head>
+        <body>
+            
+            <p>
+                Hello,<br/><br/>
+                The contract below has been created in Salesforce. Click  &nbsp;
+                <apex:outputlink value="{!LEFT($Api.Partner_Server_URL_140,FIND('.com',$Api.Partner_Server_URL_140)+4)+contract.Id}">here</apex:outputlink>
+                to navigate to the Salesforce record.<br/><br/>
+            </p>
+            <apex:outputPanel rendered="{!contract.RecordType.Name == 'Purchase Contract'}">
+                <div class="b">
+                    <ul class="roman">
+                        
+                        <li> <span class="bold">Contract Type:</span> {!contract.RecordType.Name}
+                            <ul class="square" style="padding-left:20px">
+                                <li ><span class="bold">Sales Contract Consumer:</span>{!contract.Sales_Contract_Consumer__r.Name}</li>
+                                <li><span class="bold">Sales Contract Notes:</span> {!contract.Sales_Contract_Notes__c} </li>
+                                <li><span class="bold">Customer Name:</span> {!contract.Customer_Name__r.Name}</li>
+                                 <li><span class="bold">Effective Date:</span> 
+                                    <apex:outputText value="{0, date, MMMM d','  yyyy}">
+                                        <apex:param value="{!contract.Effective_Date__c}" /> 
+                                    </apex:outputText>
+                                </li>
+                                <li><span class="bold">Completion Date:</span> 
+                                    <apex:outputText value="{0, date, MMMM d','  yyyy}">
+                                        <apex:param value="{!contract.Completion_Date__c}" /> 
+                                    </apex:outputText>
+                                </li>
+                                <li><span class="bold">Pay Term:</span> {!contract.Pay_Term__c} </li>
+                                <li><span class="bold">Blind Shipment:</span> {!IF(contract.Blind_Shipment__c==true, 'Y', 'N')}</li>
+                                <li><span class="bold">Pickup point (or Delivery for sales):</span>{!contract.Pickup_Location_Name__c}</li>
+                                <li><span class="bold">Freight Terms:</span> {!contract.Freight_Terms__c}</li>
+                                <li><span class="bold">Pricing Formula:</span> {!contract.Pricing_Formula__c}</li>
+                                <apex:outputPanel rendered="{!contract.Pricing_Formula__c == 'Avg'}">
+                                    <li><span class="bold">Start Date:</span> {!contract.Pricing_Start_Date__c}</li>
+                                    <li><span class="bold">End Date:</span> {!contract.Pricing_End_Date__c}</li>
+                                </apex:outputPanel>
+                                <li><span class="bold">LME:</span> 
+                                     <apex:outputText value="{0, number, ###,###,###,##0.0000}"><apex:param value="{!contract.LME_Per_lb__c}"/>
+                                </apex:outputText></li>
+                                <li><span class="bold">MWP:</span> 
+                                     <apex:outputText value="{0, number, ###,###,###,##0.0000}"><apex:param value="{!contract.Midwest_Prem_Per_lb__c}"/>
+                                </apex:outputText></li>
+                                <li><span class="bold">Market Price:</span> 
+                                     <apex:outputText value="{0, number, ###,###,###,##0.0000}"><apex:param value="{!contract.Market_Price_Per_lb__c}"/>
+                                </apex:outputText></li>
+                                <li><span class="bold">Assumed Freight:</span> 
+                                     <apex:outputText value="{0, number, ###,###,###,##0.0000}"><apex:param value="{!contract.Assumed_Freight__c}"/>
+                                </apex:outputText></li>
+                                <li><span class="bold">Prior Day MWP?:</span> {!IF(contract.Prior_Day_MWP__c==true, 'Y', 'N')}</li>
+                                <li><span class="bold">Hedged?:</span>{!IF(contract.Hedged__c==true, 'Y', 'N')}</li>
+                                <li><span class="bold">Sales Contract Delivery Destination:</span>{!contract.Sales_Contract_Delivery_Destination__r.Location_name__c}</li>
+                                <li><span class="bold">Vendor Order:</span>{!contract.Vendor_Order__c}</li>
+                            </ul>
+                        </li>
+               
+                        <li> <span class="bold">Notes:</span> {!contract.Notes__c}
+                            
+                        </li>
+                        
+                    </ul>
+                </div>
+                <br/>
+                
+                <table id="customers">
+                    <tr>
+                        <th>PC Commodity</th>
+                        <th>PC Count Order</th>
+                        <th>PC Volume</th>
+                        <th>PC Price</th>
+                        <th>Linked SC Contract #</th>
+                        <th>Linked SC Account</th>
+                        <th>Linked SC Commodity</th>
+                    </tr>
+                    <apex:repeat value="{!contract.Contract_Line_Items__r}" var="lineItems">
+                        <tr>
+                            <td> {!lineItems.Commodity__r.Name} - {!lineItems.Yard__c}</td>                    
+                            <td><apex:outputText value="{0, number, ###,##0}">
+                                <apex:param value="{!lineItems.Count_Order__c}"/>
+                                </apex:outputText></td>
+                            <td><apex:outputText value="{0, number, ###,##0}">
+                                <apex:param value="{!lineItems.Sales_Volume__c}"/>
+                                </apex:outputText></td>
+                            <td>
+                                <apex:outputText value="{0, number, ###,###,###,##0.0000}"><apex:param value="{!lineItems.Price__c}"/>
+                                </apex:outputText>
+                            </td>
+                            <td>{!lineItems.Sales_Contract_Number__r.Name}</td>
+                            <td>{!lineItems.Sales_Contract_Number__r.Customer_Name__r.Name}</td>
+                            <td>{!lineItems.Sales_Contract_Line_Item__r.Commodity__r.Name}</td>
+                        </tr>
+                    </apex:repeat>
+                </table>
+            </apex:outputPanel>
+            <!-- Purchase Contract -->
+            <apex:outputPanel rendered="{!contract.RecordType.Name == 'Sales Contract'}">         
+                <div class="b">
+                    <ul class="roman">
+                        <li > <span class="bold"><strong>Contract Type:</strong></span> {!contract.RecordType.Name}
+                            <ul class="square" style="padding-left:20px">
+                                <li ><span class="bold">Customer Name:</span>{!contract.Customer_Name__r.Name}</li>
+                                <li><span class="bold">Purchase Contract Supplier:</span> {!contract.Purchase_Contract_Supplier__r.Name} </li>
+                                <li><span class="bold">Purchase Contract Notes:</span> {!contract.Purchase_Contract_Notes__c} </li>
+                                <li><span class="bold">Effective Date:</span> 
+                                    <apex:outputText value="{0, date, MMMM d','  yyyy}">
+                                        <apex:param value="{!contract.Effective_Date__c}" /> 
+                                    </apex:outputText>
+                                </li>
+                                <li><span class="bold">Completion Date:</span> 
+                                    <apex:outputText value="{0, date, MMMM d','  yyyy}">
+                                        <apex:param value="{!contract.Completion_Date__c}" /> 
+                                    </apex:outputText>
+                                </li>
+                            </ul>
+                        </li>
+                        
+                        <li> <span class="bold">Pay Term:</span> {!contract.Pay_Term__c}
+                            <ul class="square" style="padding-left:20px">
+                                <li><span class="bold">Blind Shipment:</span> {!IF(contract.Blind_Shipment__c==true, 'Y', 'N')}</li>
+                                <li><span class="bold">Delivey Location:</span> {!contract.Delivery_Location_Name__c}</li>
+                                <li><span class="bold">Freight Terms:</span> {!contract.Freight_Terms__c}</li>
+                                <li><span class="bold">Pricing Formula:</span> {!contract.Pricing_Formula__c}</li>
+                                <apex:outputPanel rendered="{!contract.Pricing_Formula__c == 'Avg'}">
+                                    <li><span class="bold">Start Date:</span> {!contract.Pricing_Start_Date__c}</li>
+                                    <li><span class="bold">End Date:</span> {!contract.Pricing_End_Date__c}</li>
+                                </apex:outputPanel>
+                                <li><span class="bold">LME:</span> 
+                                    <apex:outputText value="{0, number, ###,###,###,##0.0000}"><apex:param value="{!contract.LME_Per_lb__c}"/>
+                                </apex:outputText></li>
+                                <li><span class="bold">MWP:</span> 
+                                    <apex:outputText value="{0, number, ###,###,###,##0.0000}"><apex:param value="{!contract.Midwest_Prem_Per_lb__c}"/>
+                                </apex:outputText></li>
+                                <li><span class="bold">Market Price:</span> 
+                                    <apex:outputText value="{0, number, ###,###,###,##0.0000}"><apex:param value="{!contract.Market_Price_Per_lb__c}"/>
+                                </apex:outputText></li>
+                                <li><span class="bold">Assumed Freight:</span> 
+                                     <apex:outputText value="{0, number, ###,###,###,##0.0000}"><apex:param value="{!contract.Assumed_Freight__c}"/>
+                                </apex:outputText></li>
+                                <li><span class="bold">Prior Day MWP?:</span> {!IF(contract.Prior_Day_MWP__c==true, 'Y', 'N')}</li>
+                                <li><span class="bold">Hedged?:</span>{!IF(contract.Hedged__c==true, 'Y', 'N')}</li>
+                                <li><span class="bold">Customer Order:</span>{!contract.Customer_Order__c}</li>
+                                <li><span class="bold">Notes:</span> {!contract.Notes__c}</li>
+                            </ul>
+                        </li>
+                        
+                    </ul>
+                </div>
+                <br/>
+                
+                <table id="customers">
+                    <tr>
+                        <th>Commodity</th>
+                        <th>Count Order</th>
+                        <th>Volume</th>
+                        <th>Price</th>
+                    </tr>
+                    <apex:repeat value="{!contract.Contract_Line_Items__r}" var="lineItems">
+                        <tr>
+                            <td>{!lineItems.Commodity__r.Name} - {!lineItems.Yard__c} </td>
+                            <td><apex:outputText value="{0, number, ###,##0}">
+                                <apex:param value="{!lineItems.Count_Order__c}"/>
+                                </apex:outputText></td>
+                            <td><apex:outputText value="{0, number, ###,##0}">
+                                <apex:param value="{!lineItems.Sales_Volume__c}"/>
+                                </apex:outputText></td>
+                            <td> <apex:outputText value="{0, number, ###,###,###,##0.0000}"><apex:param value="{!lineItems.Price__c}"/>
+                                </apex:outputText></td>
+                        </tr>
+                    </apex:repeat>
+                </table>
+            </apex:outputPanel>
+            <p align="left">
+                Thank you,<br/>
+                The Schupan Team.
+                
+            </p>
+        </body>
+    </html>
+    
+</apex:component>
+                    
